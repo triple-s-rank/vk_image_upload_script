@@ -1,4 +1,6 @@
 import os
+import random
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
@@ -14,15 +16,14 @@ def get_upload_data():
     return upload_url
 
 
-def upload_photo(upload_url, photo):
+def upload_photo(upload_url, comics_name):
+    photo = f'images/{comics_name}.png'
     with open(photo, 'rb') as file:
-        photo = {
-            'photo': file,
-        }
+        photo = {'photo': file}
         response = requests.post(url=upload_url, files=photo)
+        response.raise_for_status()
     decoded_response = response.json()
     return decoded_response['server'], decoded_response['hash'], decoded_response['photo']
-    # return server, hash, photo
 
 
 def save_to_wall(server, photo, p_hash):
@@ -34,17 +35,52 @@ def save_to_wall(server, photo, p_hash):
         'hash': p_hash,
         'access_token': os.environ.get('ACCESS_TOKEN'),
         'v': 5.131,
-    }
+             }
     response = requests.post(url=url, data=params)
-    print(response.json())
+    response.raise_for_status()
+    decoded_response = response.json()['response']
+    return decoded_response[0]['id'], decoded_response[0]['owner_id']
+
+
+def wall_post(owner_id, photo_id, message):
+    url = 'https://api.vk.com/method/wall.post'
+    params = {
+              'owner_id': -214645742,
+              'from_group': 0,
+              'message': message,
+              'attachments': f'photo{owner_id}_{photo_id}',
+              'v': 5.131,
+              'access_token': os.environ.get('ACCESS_TOKEN')
+              }
+    response = requests.get(url=url, params=params)
+    response.raise_for_status()
+
+
+def download_comics(comics_number):
+    url = f'https://xkcd.com/{comics_number}/info.0.json'
+    response = requests.get(url=url)
+    response.raise_for_status()
+    decoded_response = response.json()
+    message = decoded_response['alt']
+    title = decoded_response["safe_title"]
+    image_response = requests.get(url=decoded_response['img'])
+    image_response.raise_for_status()
+
+    with open(f'images/{title}.png', 'wb') as file:
+        file.write(image_response.content)
+    return message, title
 
 
 def main():
     load_dotenv()
-    photo = 'images/chemicals.png'
-    server, p_hash, photo = upload_photo(get_upload_data(), photo)
-    save_to_wall(server, photo, p_hash)
+    Path(f'{Path.cwd()}/images').mkdir(parents=True, exist_ok=True)
+    random_comics_number = random.randint(1, 2648)
+    message, comics_name = download_comics(random_comics_number)
+    server, p_hash, photo = upload_photo(get_upload_data(), comics_name)
+    photo_id, owner_id = save_to_wall(server, photo, p_hash)
+    wall_post(owner_id, photo_id, message)
+    os.remove(f'images/{comics_name}.png')
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()

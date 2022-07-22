@@ -21,16 +21,30 @@ def upload_photo(upload_url, photo):
         }
         response = requests.post(url=upload_url, files=photo)
     decoded_response = response.json()
-    server = decoded_response['server']
-    hash = decoded_response['hash']
-    photo = decoded_response['photo']
-    return server, hash, photo
+    return decoded_response['server'], decoded_response['hash'], decoded_response['photo']
+    # return server, hash, photo
+
+
+def save_to_wall(server, photo, p_hash):
+    url = 'https://api.vk.com/method/photos.saveWallPhoto'
+    params = {
+        'group_id': 214645742,
+        'photo': photo,
+        'server': server,
+        'hash': p_hash,
+        'access_token': os.environ.get('ACCESS_TOKEN'),
+        'v': 5.131,
+    }
+    response = requests.post(url=url, data=params)
+    print(response.json())
 
 
 def main():
     load_dotenv()
     photo = 'images/chemicals.png'
-    upload_photo(get_upload_data(), photo)
+    server, p_hash, photo = upload_photo(get_upload_data(), photo)
+    save_to_wall(server, photo, p_hash)
+
 
 if __name__=='__main__':
     main()

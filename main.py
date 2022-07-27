@@ -4,6 +4,7 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+from requests import HTTPError
 
 
 def get_upload_data(access_token, api_version, group_id):
@@ -33,7 +34,7 @@ def upload_image(upload_url, comics_name):
 def save_on_wall(server, photo, photo_hash, access_token, api_version, group_id):
     url = 'https://api.vk.com/method/photos.saveWallPhoto'
     params = {
-        'group_id': group_id,
+        'group_id': f'-{group_id}',
         'photo': photo,
         'server': server,
         'hash': photo_hash,
@@ -74,17 +75,27 @@ def download_image(image_number):
     return message, title
 
 
+def get_last_image_number():
+    response = requests.get(url='https://xkcd.com/info.0.json')
+    response.raise_for_status()
+    image_number = response.json()['num']
+    return image_number
+
+
 def main():
     load_dotenv()
     access_token = os.environ.get('ACCESS_TOKEN')
     api_version = os.environ.get('API_VERSION')
     group_id = os.environ.get('GROUP_ID')
     Path(f'{Path.cwd()}/images').mkdir(parents=True, exist_ok=True)
-    random_image_number = random.randint(1, 2648)
+    random_image_number = random.randint(1, get_last_image_number())
     message, comics_name = download_image(random_image_number)
-    server, photo_hash, photo = upload_image(get_upload_data(access_token, api_version, group_id), comics_name)
-    photo_id, owner_id = save_on_wall(server, photo, photo_hash, access_token, api_version, group_id)
-    post_on_wall(owner_id, photo_id, message, access_token, api_version, group_id)
+    try:
+        server, photo_hash, photo = upload_image(get_upload_data(access_token, api_version, group_id), comics_name)
+        photo_id, owner_id = save_on_wall(server, photo, photo_hash, access_token, api_version, group_id)
+        post_on_wall(owner_id, photo_id, message, access_token, api_version, group_id)
+    except HTTPError:
+        raise HTTPError
     os.remove(f'images/{comics_name}.png')
 
 

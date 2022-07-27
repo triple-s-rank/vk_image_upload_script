@@ -8,7 +8,11 @@ from dotenv import load_dotenv
 
 def get_upload_data():
     url = 'https://api.vk.com/method/photos.getWallUploadServer'
-    params = {'access_token': os.environ.get('ACCESS_TOKEN'), 'v': 5.131, 'group_id': 214645742}
+    params = {
+            'access_token': os.environ.get('ACCESS_TOKEN'),
+            'v': os.environ.get('API_VERSION'),
+            'group_id': os.environ.get('GROUP_ID'),
+    }
     response = requests.get(url=url, params=params)
     response.raise_for_status()
     decoded_response = response.json()['response']
@@ -16,7 +20,7 @@ def get_upload_data():
     return upload_url
 
 
-def upload_comics(upload_url, comics_name):
+def upload_image(upload_url, comics_name):
     photo = f'images/{comics_name}.png'
     with open(photo, 'rb') as file:
         photo = {'photo': file}
@@ -26,15 +30,15 @@ def upload_comics(upload_url, comics_name):
     return decoded_response['server'], decoded_response['hash'], decoded_response['photo']
 
 
-def save_to_wall(server, photo, photo_hash):
+def save_on_wall(server, photo, photo_hash):
     url = 'https://api.vk.com/method/photos.saveWallPhoto'
     params = {
-        'group_id': 214645742,
+        'group_id': os.environ.get('GROUP_ID'),
         'photo': photo,
         'server': server,
         'hash': photo_hash,
         'access_token': os.environ.get('ACCESS_TOKEN'),
-        'v': 5.131,
+        'v': os.environ.get('API_VERSION'),
     }
     response = requests.post(url=url, data=params)
     response.raise_for_status()
@@ -42,14 +46,14 @@ def save_to_wall(server, photo, photo_hash):
     return decoded_response[0]['id'], decoded_response[0]['owner_id']
 
 
-def wall_post(owner_id, photo_id, message):
+def post_on_wall(owner_id, photo_id, message):
     url = 'https://api.vk.com/method/wall.post'
     params = {
-        'owner_id': -214645742,
+        'owner_id': os.environ.get('GROUP_ID'),
         'from_group': 0,
         'message': message,
         'attachments': f'photo{owner_id}_{photo_id}',
-        'v': 5.131,
+        'v': os.environ.get('API_VERSION'),
         'access_token': os.environ.get('ACCESS_TOKEN'),
     }
     response = requests.get(url=url, params=params)
@@ -75,11 +79,12 @@ def main():
     Path(f'{Path.cwd()}/images').mkdir(parents=True, exist_ok=True)
     random_comics_number = random.randint(1, 2648)
     message, comics_name = download_comics(random_comics_number)
-    server, photo_hash, photo = upload_comics(get_upload_data(), comics_name)
-    photo_id, owner_id = save_to_wall(server, photo, photo_hash)
-    wall_post(owner_id, photo_id, message)
+    server, photo_hash, photo = upload_image(get_upload_data(), comics_name)
+    photo_id, owner_id = save_on_wall(server, photo, photo_hash)
+    post_on_wall(owner_id, photo_id, message)
     os.remove(f'images/{comics_name}.png')
 
 
 if __name__ == '__main__':
     main()
+

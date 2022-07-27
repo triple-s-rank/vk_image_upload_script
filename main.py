@@ -61,7 +61,7 @@ def post_on_wall(owner_id, photo_id, message, access_token, api_version, group_i
 
 
 def download_image(image_number):
-    url = f'https://xkcd.com/{comics_number}/info.0.json'
+    url = f'https://xkcd.com/{image_number}/info.0.json'
     response = requests.get(url=url)
     response.raise_for_status()
     decoded_response = response.json()

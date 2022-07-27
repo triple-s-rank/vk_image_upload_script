@@ -60,7 +60,7 @@ def post_on_wall(owner_id, photo_id, message, access_token, api_version, group_i
     response.raise_for_status()
 
 
-def download_comics(comics_number):
+def download_image(image_number):
     url = f'https://xkcd.com/{comics_number}/info.0.json'
     response = requests.get(url=url)
     response.raise_for_status()
@@ -80,8 +80,8 @@ def main():
     api_version = os.environ.get('API_VERSION')
     group_id = os.environ.get('GROUP_ID')
     Path(f'{Path.cwd()}/images').mkdir(parents=True, exist_ok=True)
-    random_comics_number = random.randint(1, 2648)
-    message, comics_name = download_comics(random_comics_number)
+    random_image_number = random.randint(1, 2648)
+    message, comics_name = download_image(random_image_number)
     server, photo_hash, photo = upload_image(get_upload_data(access_token, api_version, group_id), comics_name)
     photo_id, owner_id = save_on_wall(server, photo, photo_hash, access_token, api_version, group_id)
     post_on_wall(owner_id, photo_id, message, access_token, api_version, group_id)
